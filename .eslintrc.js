@@ -13,11 +13,13 @@ module.exports = {
     'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off',
     'comma-dangle': ['error', 'never'],
     'import/prefer-default-export': 0,
+    'import/no-extraneous-dependencies': 0,
     'no-param-reassign': [
       'error',
       {
         props: true,
         ignorePropertyModificationsFor: [
+          'context',
           'state',
           'acc',
           'e',

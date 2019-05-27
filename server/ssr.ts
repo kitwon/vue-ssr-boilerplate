@@ -1,40 +1,81 @@
+/* eslint import/no-dynamic-require: 0 */
+/* eslint global-require: 0 */
 import * as fs from 'fs';
-import * as path from 'path';
 import * as Router from 'koa-router';
 import { createBundleRenderer } from 'vue-server-renderer';
 import { Context } from 'koa';
-
-const template = fs.readFileSync(path.join(__dirname, '..', 'static/index.html'), 'utf-8');
-const serverBundle = require('../static/vue-ssr-server-bundle.json');
-const clientManifest = require('../static/vue-ssr-client-manifest.json');
+import config from './config';
+import setupDevServer from './scripts/dev-server';
 
 const router = new Router();
 
-const renderer = createBundleRenderer(serverBundle, {
-  template,
-  clientManifest
-});
-
-function renderToString(context: Context, runner: any) {
+function renderToString(context: Context, runner: any): Promise<string> {
   return new Promise((resolve, reject) => {
     runner.renderToString(context, (err: any, html: string) => {
       if (err) {
-        console.log(err);
-        reject(html);
+        console.error(err);
+        reject(err);
       }
       resolve(html);
     });
   });
 }
 
-router.get('/', async (ctx: Context) => {
-  try {
-    const html = await renderToString(ctx, renderer);
-    ctx.body = html;
-  } catch (err) {
-    console.log(err);
-    ctx.throw(500);
-  }
-});
+export default function createRouter(app) {
+  const isProd = process.env.NODE_ENV === 'production';
 
-export default router;
+  try {
+    let renderer;
+    let readyPromise;
+
+    if (isProd) {
+      const template = fs.readFileSync(config.ssr.template, 'utf-8');
+      const serverBundle = require(config.ssr.server);
+      const clientManifest = require(config.ssr.client);
+
+      renderer = createBundleRenderer(serverBundle, {
+        template,
+        clientManifest
+      });
+    } else {
+      readyPromise = setupDevServer({
+        server: app,
+        templatePath: config.ssr.template,
+        onUpdate: ({ serverBundle, options }) => {
+          renderer = createBundleRenderer(serverBundle, options);
+        }
+      });
+    }
+
+    const renderApp = async (ctx: Context) => {
+      const html = await renderToString(ctx, renderer).catch((err) => {
+        ctx.throw(500);
+        console.error('Render page error: ');
+        console.error(err);
+      });
+
+      ctx.set('Content-Type', 'text/html; charset=utf-8');
+      ctx.body = html;
+    };
+
+    let ssr;
+    if (isProd) {
+      ssr = renderApp;
+    } else {
+      ssr = async (ctx: Context) => {
+        await readyPromise;
+        return renderApp(ctx);
+      };
+    }
+
+    router.get('/app/', async (ctx: Context) => {
+      await ssr(ctx);
+    });
+
+    return router;
+  } catch (err) {
+    console.warn('Create router error');
+    console.warn(err);
+    return router;
+  }
+}

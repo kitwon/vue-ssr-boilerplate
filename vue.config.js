@@ -4,10 +4,6 @@ const VueSSRClientPlugin = require('vue-server-renderer/client-plugin');
 const nodeExternals = require('webpack-node-externals');
 const WebpackBar = require('webpackbar');
 
-const isTargetNode = process.env.WEBPACK_TARGET === 'node';
-const isProd = process.env.NODE_ENV === 'production';
-const target = isTargetNode ? 'server' : 'client';
-
 const vueConfig = {
   outputDir: 'static',
   css: {
@@ -16,10 +12,14 @@ const vueConfig = {
 };
 
 const chainWebpack = (config) => {
+  const target = process.env.SSR_TARGET;
+  const isProd = process.env.NODE_ENV === 'production';
+  const isServer = target === 'server';
+
   config.entry('app').clear()
     .add(`./src/entry-${target}.ts`).end();
 
-  // config.plugins.delete('hmr');
+  config.plugins.delete('hmr');
   config.plugins.delete('preload');
   config.plugins.delete('prefetch');
   config.plugins.delete('progress');
@@ -35,14 +35,14 @@ const chainWebpack = (config) => {
   config.stats(isProd ? 'normal' : 'none');
   config.devServer.stats('errors-only').quiet(true).noInfo(true);
 
-  if (isTargetNode) {
+  if (isServer) {
     config.output.libraryTarget('commonjs2');
     config.node.clear();
     config.externals(nodeExternals({ whitelist: [/\.css$/, /\?vue&type=style/] }));
     config.target('node');
     config.optimization.splitChunks(false).minimize(false);
     config.plugins.delete('friendly-errors');
-    config.plugin('ssr').use(VueSSRServerPlugin);
+    config.plugin('ssr-server').use(VueSSRServerPlugin);
     config.plugin('loader').use(WebpackBar, [{ name: 'Server', color: 'orange' }]);
 
     // Change cache directory for server-side
@@ -55,11 +55,11 @@ const chainWebpack = (config) => {
     config.module.rule('vue').use('vue-loader').tap((options) => {
       options.cacheIdentifier += '-server';
       options.cacheDirectory += '-server';
-      options.optimizeSSR = isTargetNode;
+      options.optimizeSSR = isServer;
       return options;
     });
   } else {
-    config.plugin('ssr').use(VueSSRClientPlugin);
+    config.plugin('ssr-client').use(VueSSRClientPlugin);
     config.plugin('loader').use(WebpackBar, [{ name: 'Client', color: 'green' }]);
     config.devtool(!isProd ? '#cheap-module-source-map' : undefined);
 
