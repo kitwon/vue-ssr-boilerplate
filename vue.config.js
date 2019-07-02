@@ -6,13 +6,11 @@ const WebpackBar = require('webpackbar');
 
 const vueConfig = {
   outputDir: 'static',
-  css: {
-    extract: process.env.NODE_ENV === 'production'
-  }
+  publicPath: 'app'
 };
 
 const chainWebpack = (config) => {
-  const target = process.env.SSR_TARGET;
+  const target = process.env.SSR_TARGET || 'client';
   const isProd = process.env.NODE_ENV === 'production';
   const isServer = target === 'server';
 
@@ -24,6 +22,7 @@ const chainWebpack = (config) => {
   config.plugins.delete('prefetch');
   config.plugins.delete('progress');
   if (!isProd) config.plugins.delete('no-emit-on-errors');
+
   // HTML
   if (isProd) {
     config.plugin('html').tap((args) => {

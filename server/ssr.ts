@@ -9,6 +9,8 @@ import setupDevServer from './scripts/dev-server';
 
 const router = new Router();
 
+// Wrap renderToString into the Promise
+// renderToString使用Promise封装
 function renderToString(context: Context, runner: any): Promise<string> {
   return new Promise((resolve, reject) => {
     runner.renderToString(context, (err: any, html: string) => {
@@ -28,6 +30,8 @@ export default function createRouter(app) {
     let renderer;
     let readyPromise;
 
+    // 获取BundleRenderer
+    // 开发环境下从webpack中获取资源
     if (isProd) {
       const template = fs.readFileSync(config.ssr.template, 'utf-8');
       const serverBundle = require(config.ssr.server);
@@ -68,13 +72,13 @@ export default function createRouter(app) {
       };
     }
 
-    router.get('/app/', async (ctx: Context) => {
+    router.get(`/${config.ssr.baseURL}/`, async (ctx: Context) => {
       await ssr(ctx);
     });
 
     return router;
   } catch (err) {
-    console.warn('Create router error');
+    console.warn('Create router error:');
     console.warn(err);
     return router;
   }

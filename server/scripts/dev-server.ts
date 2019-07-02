@@ -47,7 +47,7 @@ export default function setupDevServer(
     let template;
     let clientManifest;
 
-    const url = `http://localhost:${config.serve.port}`;
+    const url = `http://localhost:${config.serve.port}${clientConfig.output.publicPath}`;
 
     // HMR update callback
     const update = () => {

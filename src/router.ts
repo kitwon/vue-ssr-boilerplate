@@ -27,8 +27,8 @@ const routes: RouteConfig[] = [
 export default function createRouter() {
   const routerOptions: RouterOptions = {
     mode: 'history',
-    // base: process.env.BASE_URL,
-    base: 'app',
+    base: process.env.BASE_URL,
+    // base: 'app',
     routes
   };
   const router = new Router(routerOptions);

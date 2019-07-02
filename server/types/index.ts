@@ -6,5 +6,6 @@ export interface IConfigOptions {
     template: string;
     server: string;
     client: string;
+    baseURL: string;
   }
 }
